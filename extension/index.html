@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Твинкл · Помощник голосования</title>
+  <link rel="icon" href="icons/32.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="icons/48.png" alt="" width="40" height="40"><span>Твинкл<small>Помощник голосования</small></span></a>
+    <span class="local-label"><span class="dot"></span> Всё хранится у вас</span>
+  </header>
+  <main>
+    <section class="hero">
+      <div><span class="eyebrow">ВАШИ СЕРВЕРЫ. В ВАШЕМ РИТМЕ.</span>
+        <h1>Поддержать своих.<br><span>И ничего не забыть.</span></h1>
+        <p>Соберите серверы в один список. Твинкл напомнит о голосовании через 16 часов после вашей отметки.</p>
+      </div>
+      <div class="summary" aria-label="Состояние списка">
+        <strong id="readyCount">0</strong><span>ждут вашей отметки</span>
+        <div class="summary-bottom"><span id="totalCount">0 из 19 серверов</span><span>16 часов</span></div>
+      </div>
+    </section>
+    <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
+    <section class="toolbar panel">
+      <div><span id="mode" class="pill">На паузе</span><p id="modeHint">Добавьте серверы и включите напоминания.</p></div>
+      <div class="actions"><button id="toggle" class="primary">Начать напоминания</button><button id="openNext" class="secondary">Открыть следующий</button></div>
+    </section>
+    <div class="layout">
+      <section class="panel servers-panel">
+        <div class="section-title"><div><span class="eyebrow">СПИСОК ПОДДЕРЖКИ</span><h2>Мои серверы <span id="listCount" class="count">0</span></h2></div><button id="showAdd" class="text-button">+ Добавить</button></div>
+        <p class="note">Откройте WARGM, проголосуйте и вернитесь сюда нажать «Я проголосовал». Это ваша отметка, а не проверка голоса сайтом.</p>
+        <div id="empty" class="empty">
+          <span class="empty-symbol" aria-hidden="true">✦</span><h3>Здесь будут ваши серверы</h3>
+          <p>Вставьте одну ссылку или сразу весь список.<br>Можно добавить до 19 серверов WARGM.</p>
+          <button id="emptyAdd" class="primary">Добавить серверы</button>
+        </div>
+        <div id="servers" class="servers"></div>
+      </section>
+      <aside>
+        <section class="panel add-panel" id="addPanel">
+          <span class="eyebrow">НАЧНЁМ СО СПИСКА</span><h2>Добавить серверы</h2>
+          <form id="addForm">
+            <label for="links">Ссылки на серверы</label>
+            <textarea id="links" rows="5" maxlength="12000" placeholder="https://wargm.ru/server/12345&#10;&#10;Или с названием:&#10;Мой сервер | https://wargm.ru/server/12345"></textarea>
+            <p class="hint">Каждый сервер с новой строки. Повторяющиеся ссылки пропустим.</p>
+            <button class="primary full" type="submit">Добавить в список</button>
+          </form>
+        </section>
+        <section class="panel">
+          <h2>Без лишнего шума</h2>
+          <p class="note">Твинкл не открывает страницы по таймеру и не переключает ваши вкладки. Переход к серверу происходит только по вашему нажатию.</p>
+          <button id="notifications" class="secondary full">Включить уведомления</button>
+          <p id="notificationsHint" class="hint">Без уведомлений останется счётчик на значке расширения.</p>
+        </section>
+        <section class="panel">
+          <h2>Список всегда под рукой</h2>
+          <p class="note">Сохраните список в файл или перенесите его на другой компьютер.</p>
+          <div class="actions"><button id="export" class="secondary">Сохранить</button><button id="import" class="secondary">Загрузить</button></div>
+          <input id="importFile" type="file" accept=".json,application/json" hidden>
+        </section>
+      </aside>
+    </div>
+    <details class="panel history-panel">
+      <summary>История действий <span>Только на этом устройстве</span></summary>
+      <div id="history" class="history"></div>
+      <button id="clearHistory" class="text-button">Очистить историю</button>
+    </details>
+    <footer><span>Твинкл 0.1.0 · Голос подтверждаете вы</span><a href="privacy.html" target="_blank" rel="noopener">Что хранит расширение</a></footer>
+  </main>
+  <dialog id="editDialog">
+    <form id="editForm">
+      <h2>Название сервера</h2><label for="editName">Как показать его в списке</label><input id="editName" maxlength="70" required>
+      <div class="actions"><button class="primary" type="submit">Сохранить</button><button id="cancelEdit" class="secondary" type="button">Отмена</button></div>
+    </form>
+  </dialog>
+  <dialog id="deleteDialog">
+    <h2>Удалить сервер?</h2><p id="deleteName" class="note"></p><p class="hint">Сервер пропадёт из списка. Его можно будет добавить снова.</p>
+    <div class="actions"><button id="confirmDelete" class="danger">Удалить</button><button id="cancelDelete" class="secondary">Оставить</button></div>
+  </dialog>
+</body>
+</html>
