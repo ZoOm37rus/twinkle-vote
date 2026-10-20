@@ -9,7 +9,8 @@ function event() {
 
 async function fixture(initial = freshState()) {
   const data = initial ? { twinkleState: { defaultServersVersion: 1, ...structuredClone(initial) } } : {};
-  const calls = { tabs: [], notices: [], alarms: new Map(), badge: "" };
+  const calls = { tabs: [], updates: [], notices: [], alarms: new Map(), badge: "" };
+  const openTabs = new Map();
   const events = { message: event(), startup: event(), installed: event(), alarm: event(),
     clicked: event(), notice: event(), noticeButton: event(), removed: event() };
   let granted = true;
@@ -22,7 +23,20 @@ async function fixture(initial = freshState()) {
       set: async value => Object.assign(data, structuredClone(value)), setAccessLevel: async () => {} } },
     alarms: { create: async (name, value) => { calls.alarms.set(name, value); },
       clear: async name => calls.alarms.delete(name), onAlarm: events.alarm },
-    tabs: { create: async value => { calls.tabs.push(value); return { id: calls.tabs.length }; } },
+    tabs: { onRemoved: event(), create: async value => {
+      calls.tabs.push(value);
+      const tab = { id: calls.tabs.length, ...value };
+      openTabs.set(tab.id, tab);
+      return tab;
+    }, get: async id => {
+      if (!openTabs.has(id)) throw new Error("Missing tab");
+      return openTabs.get(id);
+    }, update: async (id, value) => {
+      if (!openTabs.has(id)) throw new Error("Missing tab");
+      calls.updates.push({ id, ...value });
+      Object.assign(openTabs.get(id), value);
+      return openTabs.get(id);
+    } },
     permissions: { contains: async () => granted, onRemoved: events.removed },
     notifications: { create: async (id, value) => { calls.notices.push({ id, ...value }); },
       clear: async () => true, onClicked: events.notice, onButtonClicked: events.noticeButton }
@@ -33,7 +47,13 @@ async function fixture(initial = freshState()) {
     events.message.handlers[0](message, { id: "test", url: chrome.runtime.getURL("index.html") }, resolve);
   });
   await send({ type: "get" });
-  return { data, calls, chrome, events, send, setGranted: value => { granted = value; } };
+  const page = (message, overrides = {}) => new Promise(resolve => {
+    const tour = data.twinkleState.tour;
+    const sender = { id: "test", frameId: 0, documentId: "doc1",
+      tab: { id: tour?.tabId }, url: `https://wargm.ru/server/${tour?.ids[tour?.index]}/votes`, ...overrides };
+    events.message.handlers[0]({ tourId: tour?.id, ...message }, sender, resolve);
+  });
+  return { data, calls, chrome, events, send, page, openTabs, setGranted: value => { granted = value; } };
 }
 
 test("Background serializes concurrent additions without loss", async () => {
@@ -153,4 +173,119 @@ test("New installation saves bundled servers once and never opens pages", async 
   assert.equal(reply.state.servers.length, 18);
   assert.equal(reply.state.servers.some(s => s.id === id), false);
   assert.equal(f.calls.tabs.length, 0);
+});
+
+test("Tours split fifteen main servers and four Stalker servers", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "main" });
+  assert.equal(f.data.twinkleState.tour.ids.length, 15);
+  assert.equal(f.calls.updates.at(-1).url, "https://wargm.ru/server/71046/votes");
+  await f.send({ type: "tour:start", group: "stalker" });
+  assert.deepEqual(f.data.twinkleState.tour.ids, ["80996", "81003", "81301", "81302"]);
+  assert.equal(f.calls.updates.at(-1).url, "https://wargm.ru/server/80996/votes");
+});
+
+test("Trusted content click followed by timer on reloaded document advances exactly once", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "main" });
+  await f.page({ type: "tour:hello" });
+  await f.page({ type: "tour:observe", status: "ready" });
+  await f.page({ type: "tour:clicked" });
+  await f.page({ type: "tour:hello" }, { documentId: "reloaded" });
+  const before = Date.now();
+  await f.page({ type: "tour:observe", status: "cooldown", timer: "15ч. 60м." }, { documentId: "reloaded" });
+  const state = f.data.twinkleState;
+  assert.equal(state.tour.index, 1);
+  assert.equal(state.tour.confirmed, 1);
+  assert.equal(f.calls.tabs.length, 1);
+  assert.equal(f.calls.updates.at(-1).url, "https://wargm.ru/server/71261/votes");
+  assert.ok(state.servers[0].lastVoteAt >= before);
+  assert.equal(state.servers[0].dueAt - state.servers[0].lastVoteAt, INTERVAL);
+  const stale = await f.page({ type: "tour:observe", status: "cooldown", timer: "15ч. 60м." },
+    { documentId: "reloaded", url: "https://wargm.ru/server/71046/votes" });
+  assert.equal(stale.tour, null);
+  assert.equal(f.data.twinkleState.tour.confirmed, 1);
+});
+
+test("Initial cooldown skips server and preserves absence of a new vote", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "main" });
+  await f.page({ type: "tour:hello" });
+  await f.page({ type: "tour:observe", status: "cooldown", timer: "2ч. 10м." });
+  assert.equal(f.data.twinkleState.tour.skipped, 1);
+  assert.equal(f.data.twinkleState.tour.confirmed, 0);
+  assert.equal(f.data.twinkleState.servers[0].lastVoteAt, null);
+  assert.ok(f.data.twinkleState.servers[0].dueAt > Date.now());
+});
+
+test("Invalid timers, frames, tabs, origins, stale documents and tour tokens cannot confirm votes", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "main" });
+  await f.page({ type: "tour:hello" });
+  for (const overrides of [{ frameId: 1 }, { tab: { id: 777 } }, { url: "https://evil.test/server/71046/votes" },
+    { documentId: "stale" }, { documentLifecycle: "cached" }]) {
+    const reply = await f.page({ type: "tour:observe", status: "cooldown", timer: "15ч. 60м." }, overrides);
+    assert.equal(reply.tour, null);
+  }
+  assert.equal((await f.page({ type: "tour:observe", status: "cooldown", timer: "15ч. 60м.", tourId: "old" })).tour, null);
+  assert.equal((await f.page({ type: "tour:observe", status: "cooldown", timer: "Ошибка 16 часов" })).ok, false);
+  assert.equal(f.data.twinkleState.tour.index, 0);
+  assert.equal(f.data.twinkleState.servers[0].lastVoteAt, null);
+});
+
+test("Manual skip and stop never fabricate votes; next page uses the same tab", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "stalker" });
+  await f.page({ type: "tour:hello" });
+  await f.page({ type: "tour:skip" });
+  assert.equal(f.data.twinkleState.tour.index, 1);
+  assert.equal(f.calls.tabs.length, 1);
+  await f.send({ type: "tour:stop" });
+  assert.equal((await f.page({ type: "tour:hello" })).tour, null);
+  assert.ok(f.data.twinkleState.servers.every(s => s.lastVoteAt === null));
+});
+
+test("Navigation failure preserves recorded result and resume starts at next server", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "stalker" });
+  await f.page({ type: "tour:hello" });
+  await f.page({ type: "tour:observe", status: "ready" });
+  await f.page({ type: "tour:clicked" });
+  const update = f.chrome.tabs.update;
+  f.chrome.tabs.update = async () => { throw new Error("navigation failed"); };
+  await f.page({ type: "tour:observe", status: "cooldown", timer: "15ч. 59м." });
+  assert.equal(f.data.twinkleState.tour.phase, "paused");
+  assert.equal(f.data.twinkleState.tour.confirmed, 1);
+  f.chrome.tabs.update = update;
+  await f.send({ type: "tour:resume" });
+  assert.equal(f.calls.updates.at(-1).url, "https://wargm.ru/server/81003/votes");
+});
+
+test("Browser startup and tab closing pause tours without opening pages", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "stalker" });
+  f.events.startup.fire();
+  await f.send({ type: "get" });
+  assert.equal(f.data.twinkleState.tour.phase, "paused");
+  assert.equal(f.calls.tabs.length, 1);
+  await f.send({ type: "tour:resume" });
+  f.chrome.tabs.onRemoved.fire(f.data.twinkleState.tour.tabId);
+  await f.send({ type: "get" });
+  assert.equal(f.data.twinkleState.tour.phase, "paused");
+});
+
+test("Completing a group returns to extension without opening another group", async () => {
+  const f = await fixture(null);
+  await f.send({ type: "tour:start", group: "stalker" });
+  for (let index = 0; index < 4; index++) {
+    await f.page({ type: "tour:hello" }, { documentId: `doc${index}` });
+    await f.page({ type: "tour:observe", status: "ready" }, { documentId: `doc${index}` });
+    await f.page({ type: "tour:clicked" }, { documentId: `doc${index}` });
+    await f.page({ type: "tour:observe", status: "cooldown", timer: "15ч. 59м." }, { documentId: `doc${index}` });
+  }
+  assert.equal(f.data.twinkleState.tour.active, false);
+  assert.equal(f.data.twinkleState.tour.confirmed, 4);
+  assert.equal(f.calls.tabs.length, 1);
+  assert.equal(f.calls.updates.at(-1).url, "chrome-extension://test/index.html#tour-finished");
+  assert.equal(f.data.twinkleState.servers.filter(s => s.lastVoteAt !== null).length, 4);
 });

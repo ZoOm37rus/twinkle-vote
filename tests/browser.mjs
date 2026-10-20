@@ -47,6 +47,9 @@ try {
   assert.equal(defaults.enabled, false);
   assert.equal(defaults.defaultServersVersion, 1);
   await page.screenshot({ path: path.join(results, "00-default-servers.png"), fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.screenshot({ path: path.join(results, "default-store-1280x800.png") });
+  await page.setViewportSize({ width: 1280, height: 1000 });
   for (const server of defaults.servers) {
     const reply = await page.evaluate(id => chrome.runtime.sendMessage({ type: "remove", id }), server.id);
     assert.equal(reply.ok, true);

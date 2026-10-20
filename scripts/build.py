@@ -18,10 +18,10 @@ def archive(target, entries):
             output.writestr(info, path.read_bytes(), compresslevel=9)
 
 manifest = json.loads((EXT / "manifest.json").read_text(encoding="utf-8"))
-assert not manifest.get("host_permissions")
-assert not manifest.get("content_scripts")
+assert manifest.get("host_permissions") == ["https://wargm.ru/*"]
+assert manifest["content_scripts"][0]["matches"] == ["https://wargm.ru/server/*/votes*"]
 for entry in ("background.js", "index.html", "app.js", "model.js", "style.css",
-              "privacy.html", "default-servers.js", "icons/16.png", "icons/32.png", "icons/48.png", "icons/128.png"):
+              "privacy.html", "popup.html", "popup.js", "tour.js", "vote-page.js", "default-servers.js", "icons/16.png", "icons/32.png", "icons/48.png", "icons/128.png"):
     assert (EXT / entry).is_file(), f"Missing: {entry}"
 DIST.mkdir(exist_ok=True)
 version = manifest["version"]

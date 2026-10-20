@@ -2,11 +2,16 @@
   "manifest_version": 3,
   "name": "Твинкл: помощник голосования",
   "short_name": "Твинкл",
-  "version": "0.1.1",
-  "description": "Серверы WARGM в одном месте, напоминания через 16 часов и переход к ручному голосованию.",
+  "version": "0.2.0",
+  "description": "15 основных серверов и 4 Сталкера. Вы голосуете на WARGM, Твинкл открывает следующий сервер после появления таймера.",
   "minimum_chrome_version": "120",
-  "permissions": ["storage", "alarms"],
-  "optional_permissions": ["notifications"],
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "optional_permissions": [
+    "notifications"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -16,7 +21,8 @@
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "options_ui": {
     "page": "index.html",
@@ -30,5 +36,20 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
-  }
+  },
+  "host_permissions": [
+    "https://wargm.ru/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://wargm.ru/server/*/votes*"
+      ],
+      "js": [
+        "vote-page.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
 }

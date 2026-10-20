@@ -11,30 +11,37 @@
 <body>
   <header class="topbar">
     <a class="brand" href="index.html"><img src="icons/48.png" alt="" width="40" height="40"><span>Твинкл<small>Помощник голосования</small></span></a>
-    <span class="local-label"><span class="dot"></span> Всё хранится у вас</span>
+    <span class="local-label">TWINKLE PLAY <span class="version">0.2.0</span></span>
   </header>
   <main>
     <section class="hero">
-      <div><span class="eyebrow">ВАШИ СЕРВЕРЫ. В ВАШЕМ РИТМЕ.</span>
-        <h1>Поддержать своих.<br><span>И ничего не забыть.</span></h1>
-        <p>Соберите серверы в один список. Твинкл напомнит о голосовании через 16 часов после вашей отметки.</p>
+      <div><h1>Голосование</h1>
+        <p>Вы нажимаете «ГОЛОСОВАТЬ» на WARGM. Твинкл замечает таймер и открывает следующий сервер.</p>
       </div>
       <div class="summary" aria-label="Состояние списка">
-        <strong id="readyCount">0</strong><span>ждут вашей отметки</span>
-        <div class="summary-bottom"><span id="totalCount">0 из 19 серверов</span><span>16 часов</span></div>
+        <strong id="readyCount">0</strong><span>готовы к проверке</span>
+        <div class="summary-bottom"><span id="totalCount">0 из 19 серверов</span><span>WARGM</span></div>
       </div>
     </section>
     <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
+    <section class="panel tour-panel">
+      <div class="project-buttons">
+        <button id="mainStart" class="project-card project-main" aria-label="Проголосовать за основной проект"><span class="project-label">TWINKLE PLAY</span><strong>Основной проект</strong><span id="mainCount" class="project-count">15 серверов</span><span class="project-cta">Проголосовать <span aria-hidden="true">→</span></span></button>
+        <button id="stalkerStart" class="project-card project-stalker" aria-label="Проголосовать за Сталкер"><span class="project-label">TWINKLE PLAY</span><strong>Сталкер</strong><span id="stalkerCount" class="project-count">4 сервера</span><span class="project-cta">Проголосовать <span aria-hidden="true">→</span></span></button>
+      </div>
+      <p id="tourStatus" class="note" role="status"></p>
+      <div class="actions"><button id="tourResume" class="secondary" hidden>Продолжить</button><button id="tourStop" class="text-button" hidden>Остановить</button></div>
+    </section>
     <section class="toolbar panel">
       <div><span id="mode" class="pill">На паузе</span><p id="modeHint">Добавьте серверы и включите напоминания.</p></div>
       <div class="actions"><button id="toggle" class="primary">Начать напоминания</button><button id="openNext" class="secondary">Открыть следующий</button></div>
     </section>
     <div class="layout">
       <section class="panel servers-panel">
-        <div class="section-title"><div><span class="eyebrow">СПИСОК ПОДДЕРЖКИ</span><h2>Мои серверы <span id="listCount" class="count">0</span></h2></div><button id="showAdd" class="text-button">+ Добавить</button></div>
-        <p class="note">Откройте WARGM, проголосуйте и вернитесь сюда нажать «Я проголосовал». Это ваша отметка, а не проверка голоса сайтом.</p>
+        <div class="section-title"><div><h2>Мои серверы <span id="listCount" class="count">0</span></h2></div><button id="showAdd" class="text-button">+ Добавить</button></div>
+        <p class="note">В проходе по проекту результат сохраняется по таймеру WARGM. Если голосовали отдельно, можно поставить отметку «Я проголосовал» вручную.</p>
         <div id="empty" class="empty">
-          <span class="empty-symbol" aria-hidden="true">✦</span><h3>Здесь будут ваши серверы</h3>
+          <h3>Здесь будут ваши серверы</h3>
           <p>Вставьте одну ссылку или сразу весь список.<br>Можно добавить до 19 серверов WARGM.</p>
           <button id="emptyAdd" class="primary">Добавить серверы</button>
         </div>
@@ -42,7 +49,7 @@
       </section>
       <aside>
         <section class="panel add-panel" id="addPanel">
-          <span class="eyebrow">НАЧНЁМ СО СПИСКА</span><h2>Добавить серверы</h2>
+          <h2>Добавить серверы</h2>
           <form id="addForm">
             <label for="links">Ссылки на серверы</label>
             <textarea id="links" rows="5" maxlength="12000" placeholder="https://wargm.ru/server/12345&#10;&#10;Или с названием:&#10;Мой сервер | https://wargm.ru/server/12345"></textarea>
@@ -51,13 +58,13 @@
           </form>
         </section>
         <section class="panel">
-          <h2>Без лишнего шума</h2>
-          <p class="note">Твинкл не открывает страницы по таймеру и не переключает ваши вкладки. Переход к серверу происходит только по вашему нажатию.</p>
+          <h2>Уведомления</h2>
+          <p class="note">Проход начинается после выбора проекта. Серверы сменяются в одной вкладке. В любой момент можно остановиться или пропустить сервер.</p>
           <button id="notifications" class="secondary full">Включить уведомления</button>
           <p id="notificationsHint" class="hint">Без уведомлений останется счётчик на значке расширения.</p>
         </section>
         <section class="panel">
-          <h2>Список всегда под рукой</h2>
+          <h2>Перенос списка</h2>
           <p class="note">Сохраните список в файл или перенесите его на другой компьютер.</p>
           <div class="actions"><button id="export" class="secondary">Сохранить</button><button id="import" class="secondary">Загрузить</button></div>
           <input id="importFile" type="file" accept=".json,application/json" hidden>
@@ -69,7 +76,7 @@
       <div id="history" class="history"></div>
       <button id="clearHistory" class="text-button">Очистить историю</button>
     </details>
-    <footer><span>Твинкл 0.1.1 · Голос подтверждаете вы</span><a href="privacy.html" target="_blank" rel="noopener">Что хранит расширение</a></footer>
+    <footer><span>Твинкл 0.2.0 · Голос подтверждаете вы</span><a href="privacy.html" target="_blank" rel="noopener">Что хранит расширение</a></footer>
   </main>
   <dialog id="editDialog">
     <form id="editForm">

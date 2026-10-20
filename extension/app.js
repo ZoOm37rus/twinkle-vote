@@ -1,4 +1,5 @@
 import { dueServers, exportList } from "./model.js";
+import { groupOf, groupName } from "./tour.js";
 const $ = id => document.getElementById(id);
 let state;
 let busy = false;
@@ -69,8 +70,22 @@ function render() {
     ? "Уведомим, когда подойдёт время для новых серверов. Windows может скрывать уведомления в режиме «Не беспокоить»."
     : "Без уведомлений останется счётчик на значке расширения.";
   $("empty").hidden = state.servers.length > 0;
+  for (const group of ["main", "stalker"]) {
+    const servers = state.servers.filter(server => groupOf(server) === group);
+    const ready = servers.filter(server => server.dueAt <= now).length;
+    $(group + "Count").textContent = `${servers.length} серверов · готовы: ${ready}`;
+    $(group + "Start").disabled = !ready;
+  }
+  $("tourStatus").textContent = state.tour ? `${groupName(state.tour.group)}. ${state.tour.message}` : "Выберите проект. Пройдём серверы по очереди в одной вкладке.";
+  $("tourResume").hidden = $("tourStop").hidden = !state.tour?.active;
   const rows = document.createDocumentFragment();
-  state.servers.forEach((server, index) => {
+  let lastGroup;
+  [...state.servers].sort((a, b) => Number(groupOf(a) === "stalker") - Number(groupOf(b) === "stalker")).forEach((server, index) => {
+    const group = groupOf(server);
+    if (group !== lastGroup) {
+      rows.append(element("h3", "group-heading", groupName(group)));
+      lastGroup = group;
+    }
     const row = element("article", "server");
     const top = element("div", "server-top");
     top.append(element("div", "server-number", String(index + 1).padStart(2, "0")));
@@ -132,6 +147,9 @@ function focusAdd() {
   $("links").focus();
   $("addPanel").scrollIntoView({ block: "nearest" });
 }
+for (const group of ["main", "stalker"]) $(group + "Start").addEventListener("click", () => act(() => send({ type: "tour:start", group })));
+$("tourResume").addEventListener("click", () => act(() => send({ type: "tour:resume" })));
+$("tourStop").addEventListener("click", () => act(() => send({ type: "tour:stop" })));
 $("showAdd").addEventListener("click", focusAdd);
 $("emptyAdd").addEventListener("click", focusAdd);
 $("addForm").addEventListener("submit", event => {
