@@ -41,6 +41,18 @@ try {
   page = await context.newPage();
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(`chrome-extension://${extensionId}/index.html`);
+  await page.waitForFunction(() => document.querySelectorAll(".server").length === 19);
+  const defaults = await page.evaluate(async () => (await chrome.storage.local.get("twinkleState")).twinkleState);
+  assert.equal(new Set(defaults.servers.map(server => server.url)).size, 19);
+  assert.equal(defaults.enabled, false);
+  assert.equal(defaults.defaultServersVersion, 1);
+  await page.screenshot({ path: path.join(results, "00-default-servers.png"), fullPage: true });
+  for (const server of defaults.servers) {
+    const reply = await page.evaluate(id => chrome.runtime.sendMessage({ type: "remove", id }), server.id);
+    assert.equal(reply.ok, true);
+  }
+  await page.reload();
+  reports.push("Fresh installation contains 19 Twinkle Play servers; removing them and reloading does not restore them.");
   await page.waitForFunction(() => document.getElementById("toggle").disabled);
   assert.equal(await page.locator("#empty").isVisible(), true);
   assert.equal(await page.locator("#feedback").isVisible(), false);

@@ -1,3 +1,5 @@
+import { DEFAULT_SERVERS } from "./default-servers.js";
+
 export const INTERVAL = 16 * 60 * 60 * 1000;
 export const MAX_SERVERS = 19;
 export const SNOOZE = 60 * 60 * 1000;
@@ -5,6 +7,19 @@ export const SNOOZE = 60 * 60 * 1000;
 export function freshState() {
   return { version: 1, enabled: false, notifications: false, snoozeUntil: 0,
     notifiedKey: "", servers: [], history: [] };
+}
+
+export function initializeDefaults(original, now = Date.now()) {
+  if (original.defaultServersVersion === 1) return original;
+  const known = new Set(original.servers.map(server => canonicalUrl(server.url)));
+  const additions = DEFAULT_SERVERS.filter(server => !known.has(server.url))
+    .slice(0, Math.max(0, MAX_SERVERS - original.servers.length));
+  const state = additions.length ? reduceState(original, {
+    type: "add",
+    backup: JSON.stringify({ format: "twinkle-vote-servers", version: 1, servers: additions })
+  }, now) : structuredClone(original);
+  state.defaultServersVersion = 1;
+  return state;
 }
 
 export function canonicalUrl(input) {

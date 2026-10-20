@@ -21,7 +21,7 @@ manifest = json.loads((EXT / "manifest.json").read_text(encoding="utf-8"))
 assert not manifest.get("host_permissions")
 assert not manifest.get("content_scripts")
 for entry in ("background.js", "index.html", "app.js", "model.js", "style.css",
-              "privacy.html", "icons/16.png", "icons/32.png", "icons/48.png", "icons/128.png"):
+              "privacy.html", "default-servers.js", "icons/16.png", "icons/32.png", "icons/48.png", "icons/128.png"):
     assert (EXT / entry).is_file(), f"Missing: {entry}"
 DIST.mkdir(exist_ok=True)
 version = manifest["version"]

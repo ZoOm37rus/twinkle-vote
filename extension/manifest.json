@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Твинкл: помощник голосования",
   "short_name": "Твинкл",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Серверы WARGM в одном месте, напоминания через 16 часов и переход к ручному голосованию.",
   "minimum_chrome_version": "120",
   "permissions": ["storage", "alarms"],

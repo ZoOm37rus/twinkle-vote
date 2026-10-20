@@ -7,8 +7,8 @@ function event() {
   return { addListener: fn => handlers.push(fn), fire: (...args) => handlers.forEach(fn => fn(...args)), handlers };
 }
 
-async function fixture(initial) {
-  const data = initial ? { twinkleState: structuredClone(initial) } : {};
+async function fixture(initial = freshState()) {
+  const data = initial ? { twinkleState: { defaultServersVersion: 1, ...structuredClone(initial) } } : {};
   const calls = { tabs: [], notices: [], alarms: new Map(), badge: "" };
   const events = { message: event(), startup: event(), installed: event(), alarm: event(),
     clicked: event(), notice: event(), noticeButton: event(), removed: event() };
@@ -139,4 +139,18 @@ test("Marking one of several due servers does not repeat the same reminder", asy
   f.events.alarm.fire({ name: "twinkle-reminder" });
   await f.send({ type: "get" });
   assert.equal(f.calls.notices.length, 2);
+});
+
+test("New installation saves bundled servers once and never opens pages", async () => {
+  const f = await fixture(null);
+  assert.equal(f.data.twinkleState.servers.length, 19);
+  assert.equal(f.data.twinkleState.defaultServersVersion, 1);
+  const id = f.data.twinkleState.servers[0].id;
+  await f.send({ type: "remove", id });
+  f.events.installed.fire();
+  f.events.startup.fire();
+  const reply = await f.send({ type: "get" });
+  assert.equal(reply.state.servers.length, 18);
+  assert.equal(reply.state.servers.some(s => s.id === id), false);
+  assert.equal(f.calls.tabs.length, 0);
 });

@@ -1,4 +1,4 @@
-import { freshState, reduceState, dueServers, reminderKey, addLog } from "./model.js";
+import { freshState, initializeDefaults, reduceState, dueServers, reminderKey, addLog } from "./model.js";
 
 const KEY = "twinkleState";
 const ALARM = "twinkle-reminder";
@@ -13,11 +13,13 @@ function serial(work) {
 
 async function read() {
   const data = await chrome.storage.local.get(KEY);
-  if (!data[KEY]) return freshState();
-  if (data[KEY].version !== 1 || !Array.isArray(data[KEY].servers) || !Array.isArray(data[KEY].history)) {
+  const previous = data[KEY] || freshState();
+  if (previous.version !== 1 || !Array.isArray(previous.servers) || !Array.isArray(previous.history)) {
     throw new Error("Не получилось прочитать настройки. Сохранённые данные не удалены. Попробуйте перезапустить браузер.");
   }
-  return data[KEY];
+  const state = initializeDefaults(previous);
+  if (state !== previous) await save(state);
+  return state;
 }
 
 async function save(state) {
